@@ -156,6 +156,7 @@ func (c *ChatCompletionsRequest) createResponseContext(reqCtx RequestContext, di
 		toolsCalls:          toolCalls,
 		ecTransferParams:    ecParams,
 		sendAudio:           sendAudio,
+		reasoningPercentage: c.GetReasoningPercentage(reqCtx),
 	}
 }
 
@@ -220,6 +221,7 @@ var _ RequestContext = (*chatCompletionReqCtx)(nil)
 // Implementation of ResponseContext for /chat/completions requests
 type chatCompletionsResponseCtx struct {
 	baseResponseContext
+	reasoningPercentage int
 	// tool calls to be sent in the response
 	toolsCalls []api.ToolCall
 	// ecTransferParams holds simulated encoder-cache transfer params per mm hash
@@ -234,6 +236,17 @@ func (respCtx *chatCompletionsResponseCtx) ToolCalls() []api.ToolCall {
 
 func (respCtx *chatCompletionsResponseCtx) ECTransferParams() map[string]api.ECTransferParams {
 	return respCtx.ecTransferParams
+}
+
+func (c *ChatCompletionsRequest) GetReasoningPercentage(reqCtx RequestContext) int {
+	if ctx, ok := reqCtx.(*chatCompletionReqCtx); ok {
+		return ctx.runtime.Config().ReasoningPercentage
+	}
+	return 0
+}
+
+func (respCtx *chatCompletionsResponseCtx) ReasoningPercentage() int {
+	return respCtx.reasoningPercentage
 }
 
 func (respCtx *chatCompletionsResponseCtx) HasAudioOutput() bool {
