@@ -180,7 +180,7 @@ type Message struct {
 func (m Message) MarshalJSON() ([]byte, error) {
 	type alias struct {
 		Role       string            `json:"role,omitempty"`
-		Content    *ChatComplContent `json:"content,omitempty"`
+		Content    json.RawMessage `json:"content,omitempty"`
 		ToolCalls  []ToolCall        `json:"tool_calls,omitempty"`
 		ToolCallID string            `json:"tool_call_id,omitempty"`
 		Audio      *ChatAudio        `json:"audio,omitempty"`
@@ -188,7 +188,14 @@ func (m Message) MarshalJSON() ([]byte, error) {
 	}
 	a := alias{Role: m.Role, ToolCalls: m.ToolCalls, ToolCallID: m.ToolCallID, Audio: m.Audio, Reasoning: m.Reasoning}
 	if m.Content.Raw != "" || len(m.Content.Structured) > 0 {
-		a.Content = &m.Content
+		encoded, err := json.Marshal(m.Content)
+		if err != nil {
+			return nil, err
+		}
+		a.Content = encoded
+	} else if m.Reasoning != "" && m.Role == RoleAssistant {
+		// vLLM reports null content for a reasoning-only non-streaming choice.
+		a.Content = json.RawMessage("null")
 	}
 	return json.Marshal(a)
 }
