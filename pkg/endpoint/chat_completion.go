@@ -239,6 +239,10 @@ func (respCtx *chatCompletionsResponseCtx) ECTransferParams() map[string]api.ECT
 }
 
 func (c *ChatCompletionsRequest) GetReasoningPercentage(reqCtx RequestContext) int {
+	// Structured JSON output must not be split into reasoning and content.
+	if c.responseFormat != nil {
+		return 0
+	}
 	if ctx, ok := reqCtx.(*chatCompletionReqCtx); ok {
 		return ctx.runtime.Config().ReasoningPercentage
 	}
