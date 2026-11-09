@@ -339,6 +339,7 @@ func ParseCommandParamsAndLoadConfig(eng Engine) (*Configuration, error) {
 	AddToggle(f, &config.Omni,
 		"omni", "Enable omni mode: emit an image chunk when X-Send-Image header is present", "Disable omni mode")
 	f.IntVar(&config.ImageEmissionRate, "image-emission-rate", config.ImageEmissionRate, "Probability (0-100) of emitting a synthetic image chunk per chat completion request in omni mode")
+	f.IntVar(&config.ReasoningPercentage, "reasoning-percentage", config.ReasoningPercentage, "Percentage (0-100) of generated chat tokens to emit as reasoning (default 0)")
 	f.IntVar(&config.ReasoningPercentage, "reasoning-percentage", config.ReasoningPercentage, "Percentage (0-100) of chat completion tokens emitted as reasoning")
 	f.DurationVar(&config.Latencies.TimeToGenerateImage, "time-to-generate-image", config.Latencies.TimeToGenerateImage, "Simulated time to generate an image in omni mode, e.g. 500ms")
 	f.DurationVar(&config.Latencies.TimeToGenerateImageStdDev, "time-to-generate-image-std-dev", config.Latencies.TimeToGenerateImageStdDev, "Standard deviation for time to generate an image in omni mode, e.g. 50ms")
