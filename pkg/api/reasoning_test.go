@@ -15,6 +15,7 @@ func TestReasoningMessageWireFormat(t *testing.T) {
 
     withoutReasoning, err := json.Marshal(Message{Role: RoleAssistant, Content: ChatComplContent{Raw: "answer"}})
     if err != nil { t.Fatal(err) }
+    decoded = map[string]any{}
     if err := json.Unmarshal(withoutReasoning, &decoded); err != nil { t.Fatal(err) }
     if _, ok := decoded["reasoning"]; ok { t.Fatalf("default output contains reasoning: %s", withoutReasoning) }
 }
