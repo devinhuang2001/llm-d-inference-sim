@@ -11,7 +11,7 @@ func TestReasoningMessageWireFormat(t *testing.T) {
     var decoded map[string]any
     if err := json.Unmarshal(withReasoning, &decoded); err != nil { t.Fatal(err) }
     if decoded["reasoning"] != "think" { t.Fatalf("missing reasoning field: %s", withReasoning) }
-    if _, ok := decoded["content"]; ok { t.Fatalf("reasoning-only message should not have text content: %s", withReasoning) }
+    if value, ok := decoded["content"]; !ok || value != nil { t.Fatalf("reasoning-only message should have null content: %s", withReasoning) }
 
     withoutReasoning, err := json.Marshal(Message{Role: RoleAssistant, Content: ChatComplContent{Raw: "answer"}})
     if err != nil { t.Fatal(err) }
