@@ -57,6 +57,7 @@ type ResponseContext interface {
 	// HasAudioOutput reports whether this response should include audio in
 	// the message (chat completions with modalities containing "audio").
 	HasAudioOutput() bool
+	ReasoningPercentage() int
 	setWG(*sync.WaitGroup)
 	Done()
 }
@@ -167,6 +168,7 @@ func (b *baseResponseContext) SendImage() bool {
 	return b.reqCtx.Request().SendImage()
 }
 func (b *baseResponseContext) HasAudioOutput() bool { return false }
+func (b *baseResponseContext) ReasoningPercentage() int { return 0 }
 
 // RespIsEmpty reports whether respCtx carries no tokens and no tool calls.
 func RespIsEmpty(respCtx ResponseContext) bool {
