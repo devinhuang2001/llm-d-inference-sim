@@ -624,7 +624,7 @@ func (c *Communication) sendStream(ctx *fasthttp.RequestCtx, channel common.Chan
 				continue
 			}
 
-			if !c.emitResponseChunks(route, w, respBuilder, response, respCtx, &state, response.Status == endpoint.ResponseEndOfTokens) {
+			if !c.emitResponseChunks(route, w, respBuilder, response, response.RespCtx, &state, response.Status == endpoint.ResponseEndOfTokens) {
 				return
 			}
 		}
