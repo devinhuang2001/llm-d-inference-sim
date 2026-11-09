@@ -284,9 +284,6 @@ type Configuration struct {
 	// can still trigger emission independently.
 	ImageEmissionRate int `yaml:"image-emission-rate" json:"image-emission-rate" admin:"configurable"`
 
-	// ReasoningPercentage is the share of generated chat tokens emitted as reasoning.
-	// Zero preserves the existing content-only response format.
-	ReasoningPercentage int `yaml:"reasoning-percentage" json:"reasoning-percentage"`
 	// ReasoningPercentage is the fraction of generated chat tokens emitted as reasoning.
 	ReasoningPercentage int `yaml:"reasoning-percentage" json:"reasoning-percentage"`
 
@@ -812,9 +809,6 @@ func (c *Configuration) validate() error {
 
 	if c.ImageEmissionRate < 0 || c.ImageEmissionRate > 100 {
 		return errors.New("image emission rate should be between 0 and 100")
-	}
-	if c.ReasoningPercentage < 0 || c.ReasoningPercentage > 100 {
-		return errors.New("reasoning percentage should be between 0 and 100")
 	}
 	if c.ReasoningPercentage < 0 || c.ReasoningPercentage > 100 {
 		return errors.New("reasoning percentage should be between 0 and 100")
