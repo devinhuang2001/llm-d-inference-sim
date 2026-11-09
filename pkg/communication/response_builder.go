@@ -257,6 +257,36 @@ var _ responseBuilder = (*textComplHTTPRespBuilder)(nil)
 type chatComplHTTPRespBuilder struct {
 	baseRespBuilder
 	transport Transport
+	streamTokensSeen map[int]int
+}
+
+// chatReasoningTokens selects the deterministic prefix reserved for reasoning.
+// Tool-call payloads and multimodal responses retain their original wire format.
+func chatReasoningTokens(ctx endpoint.ResponseContext, count int) int {
+	if len(ctx.ToolCalls()) != 0 || ctx.SendImage() || ctx.HasAudioOutput() {
+		return 0
+	}
+	cfg, ok := ctx.(interface{ ReasoningPercentage() int })
+	if !ok {
+		return 0
+	}
+	return count * cfg.ReasoningPercentage() / 100
+}
+
+// concatenatedSSEChunk splits a mixed reasoning/content token batch into
+// separate frames so no delta carries both fields.
+type concatenatedSSEChunk []sseChunk
+
+func (parts concatenatedSSEChunk) SSEBytes() ([]byte, error) {
+	var out []byte
+	for _, chunk := range parts {
+		data, err := chunk.SSEBytes()
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, data...)
+	}
+	return out, nil
 }
 
 func (respBuilder *chatComplHTTPRespBuilder) createResponse(respCtxPerChoice []endpoint.ResponseContext,
@@ -282,6 +312,10 @@ func (respBuilder *chatComplHTTPRespBuilder) createResponse(respCtxPerChoice []e
 			}
 		} else {
 			respText := strings.Join(t.Strings, "")
+			if reasoningCount := chatReasoningTokens(choiceCtx, len(t.Strings)); reasoningCount > 0 {
+				message.Reasoning = strings.Join(t.Strings[:reasoningCount], "")
+				respText = strings.Join(t.Strings[reasoningCount:], "")
+			}
 			if sendImage {
 				message.Content = api.ChatComplContent{Structured: []api.ChatComplContentBlock{
 					{Type: "text", Text: respText},
@@ -354,6 +388,27 @@ func (respBuilder *chatComplHTTPRespBuilder) createChunk(respCtx endpoint.Respon
 	if tool != nil {
 		chunk.Choices[0].Delta.ToolCalls = []api.ToolCall{*tool}
 	} else if tokens != nil && len(tokens.Strings) > 0 {
+		if respBuilder.streamTokensSeen == nil {
+			respBuilder.streamTokensSeen = make(map[int]int)
+		}
+		seen := respBuilder.streamTokensSeen[choiceIdx]
+		respBuilder.streamTokensSeen[choiceIdx] += len(tokens.Strings)
+		reasoningLimit := chatReasoningTokens(respCtx, respCtx.UsageData().CompletionTokens)
+		reasoningPart := reasoningLimit - seen
+		if reasoningPart > len(tokens.Strings) {
+			reasoningPart = len(tokens.Strings)
+		}
+		if reasoningPart > 0 {
+			chunk.Choices[0].Delta.Reasoning = strings.Join(tokens.Strings[:reasoningPart], "")
+			if reasoningPart == len(tokens.Strings) {
+				return &jsonDataChunk{data: &chunk}
+			}
+			content := *chunk
+			content.Choices = []api.ChatRespChunkChoice{respBuilder.transport.DecorateChatChunkChoice(
+				api.CreateChatRespChunkChoice(api.CreateBaseResponseChoice(choiceIdx, finishReason), api.Message{}))}
+			content.Choices[0].Delta.Content.Raw = strings.Join(tokens.Strings[reasoningPart:], "")
+			return concatenatedSSEChunk{&jsonDataChunk{data: &chunk}, &jsonDataChunk{data: &content}}
+		}
 		tokensStr := strings.Join(tokens.Strings, "")
 		if respCtx.SendImage() {
 			chunk.Choices[0].Delta.Content = api.ChatComplContent{Structured: []api.ChatComplContentBlock{
