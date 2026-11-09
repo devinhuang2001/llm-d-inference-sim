@@ -658,6 +658,11 @@ func (c *Communication) sendStream(ctx *fasthttp.RequestCtx, channel common.Chan
 func (c *Communication) emitResponseChunks(route api.ErrorRoute, w *bufio.Writer, respBuilder responseBuilder,
 	response *endpoint.ResponseInfo, respCtx endpoint.ResponseContext, state *streamState, lastTokensChunk bool) bool {
 	choiceIdx := response.ChoiceIdx
+	// Every streamed choice has its own completion budget and response context.
+	// Do not reuse the first choice's context for reasoning or finish metadata.
+	if response.RespCtx != nil {
+		respCtx = response.RespCtx
+	}
 
 	if response.Tokens != nil {
 		// In chat completion the first chunk contains the role.
